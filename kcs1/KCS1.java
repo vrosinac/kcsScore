@@ -1,3 +1,10 @@
+//TI article ratings2
+//PUBLIC KCSautoRatingsTI "Article Number,""Knowledge Article Title"",""Issue Resolved"",""Article Rating"""
+//PUBLIC KCSautoRatingsKondor
+//PUBLIC KCSautoUsage  "Case Number","Subject","Case Owner","Case Article: Created By","Article Version: Last Modified By","Article Version: Last Modified Date","Article Version: Title","Knowledge Article ID"
+//PUBLIC KCSautoAuthor  "Article Number,""Title"",""Created By: Full Name"""
+
+
 
 package kcs1;
 
@@ -22,6 +29,10 @@ public class KCS1{
     private static void credit(String name, int authorpoints, String authorDetail, int  reusepoints, String reuseDetail,
             int ratingpoints, String ratingDetails, int issuesolvedpoints, String solvedDetails)
     {
+        if (name.equals("\"Carine Gheron\""))
+        {
+            System.out.println("Carine Gheron: author +" + authorpoints + " reuse +" + reusepoints + " rating+" +ratingpoints + " solved+" + issuesolvedpoints);
+        }
         name = name.replaceAll("\"", "");
         boolean done=false;
             int size = consultants.size();
@@ -39,10 +50,33 @@ public class KCS1{
                     { 
                         reuseDetail = "<br>" + reuseDetail;
                     }
+                    
+                    
+                    if (ratingpoints == 0)
+                    { 
+                        ratingDetails = "" ;
+                    }
+                    else
+                    {
+                       ratingDetails = "<br>"  + ratingpoints + " " + ratingDetails; 
+                    
+                    }
+                    
+                    
+                    if (issuesolvedpoints == 0)
+                    { 
+                        solvedDetails = "" ;
+                    }
+                    else
+                    {
+                            solvedDetails = "<br>" + issuesolvedpoints + " " + solvedDetails ;
+                    }
+                    
                     ConsultantScore c2 = new ConsultantScore(c1.Name,c1.totalpoints+ reusepoints + authorpoints + ratingpoints+ issuesolvedpoints,
                             c1.authorpoints+ authorpoints,
-                            c1.authorDetail  + authorDetail, c1.reusepoints+ reusepoints
-                            ,c1.reuseDetail + reuseDetail, c1.ratingpoints + ratingpoints, c1.ratingDetails + ratingDetails,
+                            c1.authorDetail  + authorDetail, c1.reusepoints+ reusepoints,
+                            c1.reuseDetail + reuseDetail, 
+                            c1.ratingpoints + ratingpoints, c1.ratingDetails + ratingDetails,
                             c1.issuesolvedpoints + issuesolvedpoints, 
                             c1.solvedDetails + solvedDetails);
                     consultants.set(i,c2);
@@ -146,11 +180,13 @@ public class KCS1{
         { 
             theauthor ="";
             id = r.ArticleId;
+            
+          
             char issuesolved_char =r.IssueResolved.toCharArray()[1];
             char rate_char =r.ArticleRating.toCharArray()[1];
             int rate = Character.getNumericValue(rate_char);
             int issuesolved = Character.getNumericValue(issuesolved_char);
-           
+            System.out.println(" rated article id: " + id + " rating: " + rate + " sollved?: "+ issuesolved ); 
             //we can't count the rating if on top of that the issue was solved.
             //In that case we only count the issue solved
             if (issuesolved>0)
@@ -180,7 +216,11 @@ public class KCS1{
               if (theauthor.isEmpty())
               {
                   theauthor ="NOT FOUND";
-              }   
+              }
+              if (theauthor.equals("\"Carine Gheron\""))
+              {
+         //      System.out.println(" credits for author: " + theauthor);
+              }    
               
              credit(theauthor,0, "", 0, " " ,rate, r.KnowledgeArticleTitle ,4*issuesolved, r.KnowledgeArticleTitle);
 
@@ -197,7 +237,42 @@ public class KCS1{
         {
             BufferedWriter writer = new BufferedWriter(new FileWriter("output.html"));
 
-            String htmlheader=          "<table style=\"width:100%\"><colgroup>"
+            String htmlheader= "<style>\n" +
+"#grad1 {\n" +
+"background-color: #0a0a0a;\n" +
+"background-image: linear-gradient(147deg, mediumvioletred , #434343  , mediumvioletred 	); "+
+"}\n" +
+"#grad2 {\n" +
+"background-color: #000000;\n" +
+"background-image: linear-gradient(147deg, #000000 , #434343 , #000000);\n" +
+"}\n" +
+".myTable { background-color: #000000;background-image: linear-gradient(147deg, #000000 , #090808, #000000);\n" + //#434343
+";border-collapse:collapse; }\n" +
+".myTable td, .myTable th { padding:5px;border:1px solid #000;  color:grey;  font-weight:lighter; }\n" +
+                    
+                    
+                    
+                    
+"</style>\n" +
+"<body  style=\"background-color:black\" >\n" +
+"<table  style=\"width:100%;height:5%\">\n" +
+"<colgroup   id=\"grad1\"> \n" +
+"<col  width=\"10%\"  >\n" +
+"<col  width=\"5%\"   >\n" +
+"<col  width=\"20%\"  >\n" +
+"<col  width=\"20%\"  >\n" +
+"<col  width=\"20%\"  >\n" +
+"<col  width=\"20%\"  >\n" +
+"</colgroup>\n" +
+"<th align=\"left\"style=\"color:grey\" > &nbsp; Name  </th>\n" +
+"<th align=\"center\" style=\"color:grey\"> score </th>\n" +
+"<th align=\"left\" > author of article</th>\n" +
+"<th align=\"left\" > article reuse </th>\n" +
+"<th align=\"left\" > article ratings </th>\n" +
+"<th align=\"left\" > issue solved by article</th></table><br style=\"line-height: 50%\">";
+                    
+                    
+                    /*        "<table style=\"width:100%\"><colgroup>"
                 + " <col  width=\"10%\" style=\"background-color:grey\"   >"
                 + "<col  width=\"5%\"  style=\"background-color:grey\"  >"
                 + "<col  width=\"20%\" style=\"background-color:grey\"  >"
@@ -212,7 +287,7 @@ public class KCS1{
                      + "<th align=\"left\" > reusepoints </th>"
                      + "<th align=\"left\" > ratingpoints </th>"
                      + "<th align=\"left\" > issuesolvedpoints </th>"
-                    ;
+                    ;*/
                 writer.write(htmlheader);
             
             
@@ -434,8 +509,11 @@ public class KCS1{
     private static ArticleAuthor createArticleAuthor(String[] metadata) 
    { 
         String Id= metadata[0];
+       //System.out.println(Id);
+        
         //String ProductName= metadata[2];
         String Author= metadata[2];
+        //System.out.println(Author);
         if (Author.equals("pair quotes"))
             
         {
@@ -641,10 +719,18 @@ class ConsultantScore
        {
            int i=0;
        }
+       String sexystyle = "style=\"font-family: Arial,  \n" +
+"            Helvetica, sans-serif; \n" +
+"        background: linear-gradient( \n" +
+"            to right, #999999, #454545); \n" +
+"        -webkit-text-fill-color: transparent; \n" +
+"        -webkit-background-clip: text; \n" +
+"	position: relative;\n" +
+"    z-index: 2;\"";
        
        
                 String result =        
-                 "<style>\n" +
+       /*          "<style>\n" +
 "#grad1 {\n" +
 "  height: 200px;\n" +
 //"  background-color: blueviolet; \n" +
@@ -653,53 +739,57 @@ class ConsultantScore
 "</style>"      
                         + "<body id=\"grad1\">"
                         
-                 +       "<table style=\"width:100%\"><colgroup>"
-                + " <col  width=\"10%\" style=\"background-color:lightpink\"  >"
-                + "<col  width=\"5%\"  style=\"background-color:salmon\"  >"  //
+                 +*/
+                        "<table style=\"width:100%\" class=\"myTable\"><colgroup>"
+                + " <col  width=\"10%\" >"
+                + "<col  width=\"5%\"    >"  //
                 + "<col  width=\"20%\"   >" //style=\"background-color:lavender\"
                 + "<col  width=\"20%\"  >" // style=\"background-color:aliceblue\"
                 + "<col  width=\"20%\"   >" // style=\"background-color:cornsilk\"
                 + "<col  width=\"20%\"   >" //style=\"background-color:lightcyan\
                 
                 +        "</colgroup>" +
-                "<th align=\"left\" >" + Name + "</th>"
-                + "<th align=\"left\" >" + totalpoints +"</th>";
+                  "<th align=\"left\"  style=\"background-image: linear-gradient(147deg, #200D54 2%, blue 74%\" >" + Name + "</th>"
+                      
+                        
+                        + "<th align=\"center\" style=\"background-image: linear-gradient(147deg, blue, darkblue, navy);color:grey;font-weight:bold\" >" + totalpoints +"</th>";
                 if (authorpoints !=0)
                 {
                     
-                    result = result  + "<th align=\"left\" ><details>"+ authorDetail+"<summary>" + authorpoints + "</summary></details></th>";
+                    result = result  + "<th align=\"left\"" + sexystyle + ">"+
+                             "<details>"+ authorDetail+"<summary>" + authorpoints + "</summary></details></th>";
                 }
                 else
                 {
-                     result = result + "<th align=\"left\"  >" + authorpoints + "</th>";
+                     result = result + "<th align=\"left\"" + sexystyle + " >" + authorpoints + "</th>";
                 
                 }
                 
                 if (reusepoints !=0)
                 {
-                    result = result +  "<th align=\"left\"   ><details>"+ reuseDetail+"<summary>" + reusepoints  + "</summary></details></th>";
+                    result = result +  "<th align=\"left\"" + sexystyle + " ><details>"+ reuseDetail+"<summary>" + reusepoints  + "</summary></details></th>";
                 } 
                 else
                 {
-                   result = result + "<th align=\"left\"   >" + reusepoints + "</th>";
+                   result = result + "<th align=\"left\"" + sexystyle + " >" + reusepoints + "</th>";
                 }
                 
                 
                 if (ratingpoints !=0)
                 {
                     
-                    result = result +  "<th align=\"left\" ><details>"+ ratingpoints + " " + ratingDetails+"<summary>" + "<br>" + ratingpoints +"</summary></details></th>";
+                    result = result +  "<th align=\"left\"" + sexystyle + " ><details>"+/* ratingpoints + " "*/ "" + ratingDetails+"<summary>" + "<br>" +  ratingpoints +"</summary></details></th>";
                 
                 }
                 else
                 {
-                   result = result + "<th align=\"left\" >" + ratingpoints +"</th>"; 
+                   result = result + "<th align=\"left\"" + sexystyle + " >" + ratingpoints +"</th>"; 
                 }
                 
                 
                 if (issuesolvedpoints !=0)
                 {
-                    result = result +  "<th align=\"left\" ><details>"+ issuesolvedpoints + " " + solvedDetails+"<summary>" + "<br>" + issuesolvedpoints +"</summary></details></th>";
+                    result = result +  "<th align=\"left\" ><details>"+ /*issuesolvedpoints + " " */ "" + solvedDetails+"<summary>" + "<br>" + issuesolvedpoints +"</summary></details></th>";
                 } 
                 else
                 {
