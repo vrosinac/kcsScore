@@ -158,8 +158,8 @@ public class KCS1{
         
         
         //----------------------- RATINGS   ----------------------
-        List<ArticleAuthor> Articleauthors = readArticleAuthorFromCSV("authors.txt");
-        List<ArticleWithRating> ratings = readArticleWithRatingsFromFile("ratings.xls");
+        List<ArticleAuthor> Articleauthors = readArticleAuthorFromFile("");
+        List<ArticleWithRating> ratings = readArticleWithRatingsFromFile("");
         String id ="";       
         String theauthor ="";
         for (ArticleWithRating r : ratings) 
@@ -621,7 +621,7 @@ public class KCS1{
     
     
    
-     private static List<ArticleAuthor> readArticleAuthorFromCSV(String fileName) 
+     private static List<ArticleAuthor> readArticleAuthorFromFile(String fileName) 
     { 
        List<ArticleAuthor> articleauthors = new ArrayList<>();
        
