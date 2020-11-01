@@ -1,9 +1,3 @@
-//TI article ratings2
-//PUBLIC KCSautoRatingsTI "Article Number,""Knowledge Article Title"",""Issue Resolved"",""Article Rating"""
-//PUBLIC KCSautoRatingsKondor
-//PUBLIC KCSautoUsage  "Case Number","Subject","Case Owner","Case Article: Created By","Article Version: Last Modified By","Article Version: Last Modified Date","Article Version: Title","Knowledge Article ID"
-//PUBLIC KCSautoAuthor  "Article Number,""Title"",""Created By: Full Name"""
-
 
 package kcs1;
 
@@ -147,7 +141,8 @@ public class KCS1{
                         reusepoints =0;
                     }
             }
-            if (   !row1.SubjectCaseOwner.equals(row1.CaseArticleCreatedBy) )
+            if (   !row1.FirstPublishedDate.equals(row1.LastPublishedDate) ) // TODO Carine
+                // first published <> last published = article was reused
             {
                     reusepoints= reusepoints + 2 ;  // we get 2 points reusing someoneelse's  article
             }
@@ -159,48 +154,66 @@ public class KCS1{
         
         //----------------------- RATINGS   ----------------------
         List<ArticleAuthor> Articleauthors = readArticleAuthorFromFile("");
-        List<ArticleWithRating> ratings = readArticleWithRatingsFromFile("");
-        String id ="";       
+        List<ArticleWithRating> ArticleRatings = readArticleWithRatingsFromFile("");
+        Collections.sort(ArticleRatings, new ArticleWithRating_comparator());
+        
+        String id ="";
+        String lastId="qwertyytrewq"; //for sure does not exist
+        String lastRatedBy="qwertyytrewq"; //for sure does not exist
         String theauthor ="";
-        for (ArticleWithRating r : ratings) 
+        for (ArticleWithRating r : ArticleRatings) 
         { 
             theauthor ="";
             id = r.ArticleId;
+            String ratedBy = r.CommunityArticleCommentOwnerName;
             char issuesolved_char =r.IssueResolved.toCharArray()[0];
             char rate_char =r.ArticleRating.toCharArray()[0];
             int rate = Character.getNumericValue(rate_char);
             int issuesolved = Character.getNumericValue(issuesolved_char);
-            System.out.println(" rated article id: " + id + " rating: " + rate + " solved?: "+ issuesolved ); 
+            //System.out.println(" rated article id: " + id + " rating: " + rate + " solved?: "+ issuesolved ); 
             //we can't count the rating if on top of that the issue was solved.
             //In that case we only count the issue solved
-            if (issuesolved>0)
+            if (  !((ratedBy.equals(lastRatedBy) && (id == lastId)))   ) // we avoid duplicates
             {
-                rate=0;
-            }
-            //we only count the ratings above 2
-            if (rate <3)
-            {
-                rate =0;
-            }
-            
-            for (ArticleAuthor a : Articleauthors)
-            {
-                if (a.Id.equals(id))
+               
+                if (issuesolved>0)
                 {
-                  theauthor = a.Author;
+                    rate=0;
+                }
+                //we only count the ratings above 2
+                if (rate <3)
+                {
+                    rate =0;
+                }
+
+                for (ArticleAuthor a : Articleauthors)
+                {
+                    if (a.Id.equals(id))
+                    {
+                      theauthor = a.Author;
+                    }
+                }
+                if (theauthor.isEmpty())
+                {
+                      theauthor ="NOT FOUND";
+                }
+                if (theauthor.equals("\"Carine Gheron\""))
+                {
+                     //      System.out.println(" credits for author: " + theauthor);
+                }    
+                if (!theauthor.equals("Created By: Full Name")) //the colum names are showing up as data rows
+                {
+                 
+                 credit(theauthor,0, "", 0, " " ,rate, r.KnowledgeArticleTitle ,4*issuesolved, r.KnowledgeArticleTitle);
                 }
             }
-            if (theauthor.isEmpty())
+            else
             {
-                  theauthor ="NOT FOUND";
+                System.out.println("we avoided one duplicate rating: \'" + r.KnowledgeArticleTitle + "\' rated by: " + ratedBy);
             }
-            if (theauthor.equals("\"Carine Gheron\""))
-            {
-                 //      System.out.println(" credits for author: " + theauthor);
-            }    
-             credit(theauthor,0, "", 0, " " ,rate, r.KnowledgeArticleTitle ,4*issuesolved, r.KnowledgeArticleTitle);
+            lastId = id;
+            lastRatedBy = ratedBy;        
         }
-
         
         //-----------------------   consulatnt scores and output     -----------------
         Collections.sort(teamScores, new ConsultantScore_comparator());
@@ -269,15 +282,15 @@ public class KCS1{
 	//Traversing list through Iterator  
         Iterator itr=list.iterator(); 
         int length = list.size();
-        System.out.println(length); 
-        while(itr.hasNext()){  
+       // System.out.println(length); 
+     /*   while(itr.hasNext()){  
             System.out.println(itr.next());  
         }  
-        
+       */ 
                 try
         {
             //open the file (obtaining input bytes from a file)  
-            FileInputStream fs=new FileInputStream(new File("C:\\JavaProjects\\KCS1\\usage.xls"));  
+            FileInputStream fs=new FileInputStream(new File("usage.xls"));  
 
             POIFSFileSystem fis = new POIFSFileSystem(fs);
             //creating workbook instance that refers to .xls file  
@@ -286,7 +299,7 @@ public class KCS1{
             HSSFSheet sheet=wb.getSheetAt(0);  
             //evaluating cell type   
             FormulaEvaluator formulaEvaluator=wb.getCreationHelper().createFormulaEvaluator();  
-            if (sheet.getRow(0).getPhysicalNumberOfCells()!=8)
+            if (sheet.getRow(0).getPhysicalNumberOfCells()!=10)
             {//check the number of columns of the file
                 AskForUsageFile();
             }
@@ -295,7 +308,7 @@ public class KCS1{
             for(Row row: sheet)     //iteration over row using for each loop  
             {  
                 int i=0;
-                String col[] = new String [8];
+                String col[] = new String [10];
                 for(Cell cell: row)    //iteration over cell using for each loop  
                 {  
                     switch(formulaEvaluator.evaluateInCell(cell).getCellType())  
@@ -347,43 +360,6 @@ public class KCS1{
         
         }
     
-
-                
-
-       /*
-       Path pathToFile = Paths.get(fileName);
-
-       // create an instance of BufferedReader 
-       // using try with resource, Java 7 feature to close resources 
-       try (BufferedReader br = Files.newBufferedReader(pathToFile, StandardCharsets.US_ASCII)) 
-       { 
-            // read the first line from the text file 
-                String line = br.readLine();
-            // loop until all lines are read 
-            while (line != null) 
-            { 
-             // use string.split to load a string array with the values from 
-             // each line of the file, using a comma as the delimiter 
-                 String[] attributes = line.split(",");
-                 ArticleWithUsage article = createArticleWithUsage(attributes);
-
-             // adding article into ArrayList 
-                 articles.add(article);
-
-             // read next line before looping 
-             // if end of file reached, line would be null 
-                 line = br.readLine();
-
-            } 
-
-       }  
-       catch (IOException ioe) 
-       { 
-
-         ioe.printStackTrace();
-
-       } 
-       */
        return articles;
 
    } 
@@ -396,14 +372,15 @@ public class KCS1{
         String CaseArticleCreatedBy= metadata[3];
         String ArticleVersionLastModifiedBy= metadata[4];
         String ArticleVersionLastModifiedDate= metadata[5];
-        String ArticleVersionTitle= metadata[6];
-        String KnowledgeArticleID= metadata[7];
+        String FirstPublishedDate= metadata[6];
+        String LastPublishedDate= metadata[7];
+        String ArticleVersionTitle= metadata[8];
+        String KnowledgeArticleID= metadata[9];
+        
 
-    /*
-    CaseNumber,   SubjectCaseOwner, CaseArticleCreatedBy,    ArticleVersionLastModifiedBy, ArticleVersionLastModifiedDate,  ArticleVersionTitle= metadata[5],    KnowledgeArticleID
-    */
+
        // create and return article of this metadata 
-       return new ArticleWithUsage(CaseNumber,   SubjectCaseOwner, CaseArticleCreatedBy,    ArticleVersionLastModifiedBy, ArticleVersionLastModifiedDate,  ArticleVersionTitle,    KnowledgeArticleID);
+       return new ArticleWithUsage(CaseNumber,   SubjectCaseOwner, CaseArticleCreatedBy,    ArticleVersionLastModifiedBy, ArticleVersionLastModifiedDate, FirstPublishedDate, LastPublishedDate, ArticleVersionTitle,    KnowledgeArticleID);
 
    }
    
@@ -421,15 +398,15 @@ public class KCS1{
         //Traversing list through Iterator  
         Iterator itr=list.iterator(); 
         int length = list.size();
-        System.out.println(length); 
-        while(itr.hasNext()){  
+       // System.out.println(length); 
+        /*while(itr.hasNext()){  
             System.out.println(itr.next());  
-        }  
+        } */ 
                 
         try
         {
             //open the file (obtaining input bytes from a file)  
-            FileInputStream fs=new FileInputStream(new File("C:\\JavaProjects\\KCS1\\ratings.xls"));  
+            FileInputStream fs=new FileInputStream(new File("ratings.xls"));  
 
             POIFSFileSystem fis = new POIFSFileSystem(fs);
             //creating workbook instance that refers to .xls file  
@@ -438,7 +415,7 @@ public class KCS1{
             HSSFSheet sheet=wb.getSheetAt(0);  
             //evaluating cell type   
             FormulaEvaluator formulaEvaluator=wb.getCreationHelper().createFormulaEvaluator();  
-            if (sheet.getRow(0).getPhysicalNumberOfCells()!=4)
+            if (sheet.getRow(0).getPhysicalNumberOfCells()!=5)
             {//check the number of columns of the file
                 AskForAuthorFile();
             }
@@ -447,7 +424,7 @@ public class KCS1{
             for(Row row: sheet)     //iteration over row using for each loop  
             {  
                 int i=0;
-                String col[] = new String [4];
+                String col[] = new String [5];
                 for(Cell cell: row)    //iteration over cell using for each loop  
                 {  
                     switch(formulaEvaluator.evaluateInCell(cell).getCellType())  
@@ -501,49 +478,7 @@ public class KCS1{
             AskForAuthorFile();
         
         }
-
-        
-        
-/*
-       Path pathToFile = Paths.get(fileName);
-       // create an instance of BufferedReader 
-       // using try with resource, Java 7 feature to close resources 
-       try (BufferedReader br = Files.newBufferedReader(pathToFile, StandardCharsets.US_ASCII)) 
-       { 
-
-
-            // read the first line from the text file 
-                String line = br.readLine();
-
-            // loop until all lines are read 
-            while (line != null) 
-            { 
-
-
-             // use string.split to load a string array with the values from 
-             // each line of 
-             // the file, using a comma as the delimiter 
-                 String[] attributes = line.split(",");
-                 ArticleWithRating rating = createArticeWithRating(attributes);
-
-             // adding article into ArrayList 
-                 ratings.add(rating);
-
-             // read next line before looping 
-             // if end of file reached, line would be null 
-                 line = br.readLine();
-
-            } 
-
-       }  
-       catch (IOException ioe) 
-       { 
-
-         ioe.printStackTrace();
-
-       }
-       */
-       return ratings;
+        return ratings;
 
    } 
  static void   AskForAuthorFile()
@@ -608,11 +543,12 @@ public class KCS1{
         String KnowledgeArticleTitle= metadata[1];
         String IssueResolved= metadata[2];
         String ArticleRating= metadata[3];
+        String CommunityArticleCommentOwnerName = metadata[4];
      /*
    "Knowledge Article Title","Article Number","Product Name","Comment","Issue Resolved","Article Rating","Comment Date"
  */
        // create and return article of this metadata 
-       return new ArticleWithRating(ArticleId,KnowledgeArticleTitle,IssueResolved,ArticleRating);
+       return new ArticleWithRating(ArticleId,KnowledgeArticleTitle,IssueResolved,ArticleRating, CommunityArticleCommentOwnerName);
         
    }
    
@@ -634,18 +570,16 @@ public class KCS1{
         //Traversing list through Iterator  
         Iterator itr=list.iterator(); 
         int length = list.size();
-        System.out.println(length); 
-        while(itr.hasNext()){  
+        //System.out.println(length); 
+       /* while(itr.hasNext()){  
             System.out.println(itr.next());  
-        }  
-        
-        
+        }*/  
       //  readInputFile("C:\\JavaProjects\\excelread2\\author.xls",list);
 
         try
         {
             //open the file (obtaining input bytes from a file)  
-            FileInputStream fs=new FileInputStream(new File("C:\\JavaProjects\\KCS1\\author.xls"));  
+            FileInputStream fs=new FileInputStream(new File("author.xls"));  
 
             POIFSFileSystem fis = new POIFSFileSystem(fs);
             //creating workbook instance that refers to .xls file  
@@ -715,42 +649,6 @@ public class KCS1{
         
         }
     
-
-
-       
-       /*
-       Path pathToFile = Paths.get(fileName);
-
-       // create an instance of BufferedReader 
-       // using try with resource, Java 7 feature to close resources 
-       try (BufferedReader br = Files.newBufferedReader(pathToFile, StandardCharsets.US_ASCII)) 
-       { 
-            // read the first line from the text file 
-             String line = br.readLine();
-
-            // loop until all lines are read 
-            while (line != null) 
-            { 
-             // use string.split to load a string array with the values from 
-             // each line of 
-             // the file, using a comma as the delimiter 
-                 String[] attributes = line.split(",");
-                 ArticleAuthor articleauthor = createArticleAuthor(attributes);
-
-             // adding article into ArrayList 
-                 articleauthors.add(articleauthor);
-
-             // read next line before looping 
-             // if end of file reached, line would be null 
-                line = br.readLine();
-            } 
-
-       }  
-       catch (IOException ioe) 
-        { 
-           ioe.printStackTrace();
-        }
-       */
        return articleauthors;
 
    } 
@@ -772,11 +670,15 @@ class ArticleWithUsage
     String CaseArticleCreatedBy;
     String ArticleVersionLastModifiedBy;
     String ArticleVersionLastModifiedDate;
+    String FirstPublishedDate;
+    String LastPublishedDate;
     String ArticleVersionTitle;
     String KnowledgeArticleID;
     
 
-    public ArticleWithUsage(String CaseNumber,   String SubjectCaseOwner,String CaseArticleCreatedBy,   String ArticleVersionLastModifiedBy,String ArticleVersionLastModifiedDate, String ArticleVersionTitle,  String  KnowledgeArticleID) 
+    public ArticleWithUsage(String CaseNumber,   String SubjectCaseOwner,String CaseArticleCreatedBy,   String ArticleVersionLastModifiedBy,
+                            String ArticleVersionLastModifiedDate, String FirstPublishedDate,String LastPublishedDate, 
+                            String ArticleVersionTitle,  String  KnowledgeArticleID) 
     { 
 
         this.CaseNumber = CaseNumber;
@@ -784,6 +686,8 @@ class ArticleWithUsage
         this.CaseArticleCreatedBy = CaseArticleCreatedBy;
         this.ArticleVersionLastModifiedBy =ArticleVersionLastModifiedBy;
         this.ArticleVersionLastModifiedDate = ArticleVersionLastModifiedDate;
+        this.FirstPublishedDate = FirstPublishedDate;
+        this.LastPublishedDate = LastPublishedDate;
         this.ArticleVersionTitle = ArticleVersionTitle;
         this.KnowledgeArticleID = KnowledgeArticleID;
     
@@ -799,14 +703,16 @@ class ArticleWithRating
     String KnowledgeArticleTitle;
     String IssueResolved;
     String ArticleRating;
+    String CommunityArticleCommentOwnerName;
         
-    public ArticleWithRating(String ArticleId, String KnowledgeArticleTitle,   String  IssueResolved,String ArticleRating ) 
+    public ArticleWithRating(String ArticleId, String KnowledgeArticleTitle,   String  IssueResolved,String ArticleRating, String CommunityArticleCommentOwnerName ) 
    { 
 
         this.ArticleId=ArticleId;
         this.KnowledgeArticleTitle = KnowledgeArticleTitle;
         this.IssueResolved = IssueResolved;
         this.ArticleRating = ArticleRating;
+        this.CommunityArticleCommentOwnerName = CommunityArticleCommentOwnerName;
    }
 } 
 
@@ -975,6 +881,8 @@ class ConsultantScore_comparator implements Comparator<ConsultantScore> {
 }
 
 
+
+
 class ArticleAuthor_comparator implements Comparator<ArticleWithUsage> {
     public int compare(ArticleWithUsage a1, ArticleWithUsage a2) {
         int c=0;
@@ -989,7 +897,25 @@ class ArticleAuthor_comparator implements Comparator<ArticleWithUsage> {
     }
 }
 
-
+class  ArticleWithRating_comparator implements Comparator<ArticleWithRating> {
+    public int compare(ArticleWithRating a1, ArticleWithRating a2) {
+        int c=0;
+        c = a1.CommunityArticleCommentOwnerName.compareTo(a2.CommunityArticleCommentOwnerName);
+        
+        if (c ==0)
+        {
+            c=a1.IssueResolved.compareTo(a2.IssueResolved);
+            
+            if (c ==0)
+            {
+                c=a1.ArticleRating.compareTo(a2.ArticleRating);
+            }
+            
+        }            
+        
+        return c;
+    }
+}
 
 
 class ArticleWithUsage_comparator implements Comparator<ArticleWithUsage> {
