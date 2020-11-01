@@ -18,7 +18,20 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
+
+import java.io.File;  
+import java.io.FileInputStream;  
+import java.io.FileNotFoundException;
+import java.io.IOException;  
+import org.apache.poi.hssf.usermodel.HSSFSheet;  
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;  
+import org.apache.poi.ss.usermodel.Cell;  
+import org.apache.poi.ss.usermodel.FormulaEvaluator;  
+import org.apache.poi.ss.usermodel.Row;  
+import java.util.*;         
+import org.apache.poi.poifs.filesystem.POIFSFileSystem;
  
 
 public class KCS1{ 
@@ -97,7 +110,7 @@ public class KCS1{
     { 
         teamScores = new ArrayList<>();
             
-        List<ArticleWithUsage> articles_withUsages = readArticlesWithUsageFromCSV("usage.txt");
+        List<ArticleWithUsage> articles_withUsages = readArticlesWithUsageFromFile("");
            
         //sort by article and author, do one run of credits   - we have to detect manually the change of author
         Collections.sort(articles_withUsages, new ArticleAuthor_comparator());
@@ -146,15 +159,15 @@ public class KCS1{
         
         //----------------------- RATINGS   ----------------------
         List<ArticleAuthor> Articleauthors = readArticleAuthorFromCSV("authors.txt");
-        List<ArticleWithRating> ratings = readArticleWIthRatingsFromCSV("ratings.txt");
+        List<ArticleWithRating> ratings = readArticleWithRatingsFromFile("ratings.xls");
         String id ="";       
         String theauthor ="";
         for (ArticleWithRating r : ratings) 
         { 
             theauthor ="";
             id = r.ArticleId;
-            char issuesolved_char =r.IssueResolved.toCharArray()[1];
-            char rate_char =r.ArticleRating.toCharArray()[1];
+            char issuesolved_char =r.IssueResolved.toCharArray()[0];
+            char rate_char =r.ArticleRating.toCharArray()[0];
             int rate = Character.getNumericValue(rate_char);
             int issuesolved = Character.getNumericValue(issuesolved_char);
             System.out.println(" rated article id: " + id + " rating: " + rate + " solved?: "+ issuesolved ); 
@@ -238,10 +251,106 @@ public class KCS1{
         }
     } 
      
-    private static List<ArticleWithUsage> readArticlesWithUsageFromCSV(String fileName) 
+    private static List<ArticleWithUsage> readArticlesWithUsageFromFile(String fileName) 
     { 
 
        List<ArticleWithUsage> articles = new ArrayList<>();
+       
+        ArrayList<String> list=new ArrayList<String>();//Creating arraylist  
+        list.add("Case Number");//Adding object in arraylist  
+        list.add("Subject");
+        list.add("Case Owner");
+        list.add("Case Article: Created By");  
+	list.add("Article Version: Last Modified By");
+	list.add("Article Version: Last Modified Date");
+	list.add("Article Version: Title");
+	list.add("Knowledge Article ID");
+
+	//Traversing list through Iterator  
+        Iterator itr=list.iterator(); 
+        int length = list.size();
+        System.out.println(length); 
+        while(itr.hasNext()){  
+            System.out.println(itr.next());  
+        }  
+        
+                try
+        {
+            //open the file (obtaining input bytes from a file)  
+            FileInputStream fs=new FileInputStream(new File("C:\\JavaProjects\\KCS1\\usage.xls"));  
+
+            POIFSFileSystem fis = new POIFSFileSystem(fs);
+            //creating workbook instance that refers to .xls file  
+            HSSFWorkbook wb=new HSSFWorkbook(fis);   
+            //creating a Sheet object to retrieve the object  
+            HSSFSheet sheet=wb.getSheetAt(0);  
+            //evaluating cell type   
+            FormulaEvaluator formulaEvaluator=wb.getCreationHelper().createFormulaEvaluator();  
+            if (sheet.getRow(0).getPhysicalNumberOfCells()!=8)
+            {//check the number of columns of the file
+                AskForUsageFile();
+            }
+            //TODO, we should get rid of the header row, but I suppose it will not harm us to have an 
+                    //additional author called author writing an article titled title... 
+            for(Row row: sheet)     //iteration over row using for each loop  
+            {  
+                int i=0;
+                String col[] = new String [8];
+                for(Cell cell: row)    //iteration over cell using for each loop  
+                {  
+                    switch(formulaEvaluator.evaluateInCell(cell).getCellType())  
+                    {  
+                        case Cell.CELL_TYPE_NUMERIC:   //field that represents numeric cell type  
+                        //getting the value of the cell as a number  
+                        int answer = (int) cell.getNumericCellValue();
+                        col[i] = ""+answer; // all the logic was previosuly done on strings. plugging new prototype to old code for now
+                        //to refafctor later
+                        break;  
+                        case Cell.CELL_TYPE_STRING:    //field that represents string cell type  
+                        //getting the value of the cell as a string  
+                        col[i] = cell.getStringCellValue();
+                        break;  
+                    }
+                  i++;
+                }
+                // do somethig with it
+                ArticleWithUsage article = createArticleWithUsage(col);
+                // adding article into ArrayList 
+                 articles.add(article);
+
+            }
+        }
+        
+        catch( FileNotFoundException e    )
+        {
+            System.out.println("File not found");
+            System.out.println(e.getMessage());
+            AskForAuthorFile();
+        }
+        catch (IOException e)
+        {
+            String ioex = e.getMessage();
+            if (ioex.contains("Invalid header signature"))
+            {
+                System.out.println("The excel file produced by Salesforce is sually corrupt. \n"
+                        + "\t to fix it open it in Excel, chose Export\n"
+                        + "\t Chose : change file type]n"
+                        + "\t chose the *.xls\n"
+                        + "\t and save onto your same file name, overwriting your file with itself after this dummy excel export\n"
+                        + "\t it should fix the issue.\n");
+            }
+            else
+            {
+                System.out.println(e.getMessage());
+            }
+            AskForUsageFile();
+        
+        }
+    
+
+                
+
+       /*
        Path pathToFile = Paths.get(fileName);
 
        // create an instance of BufferedReader 
@@ -274,6 +383,7 @@ public class KCS1{
          ioe.printStackTrace();
 
        } 
+       */
        return articles;
 
    } 
@@ -287,21 +397,6 @@ public class KCS1{
         String ArticleVersionLastModifiedBy= metadata[4];
         String ArticleVersionLastModifiedDate= metadata[5];
         String ArticleVersionTitle= metadata[6];
-        if (ArticleVersionLastModifiedDate.equals("pair quotes"))
-        {
-            int a =0;
-
-        }
-        if (CaseArticleCreatedBy.equals("pair quotes"))
-        {
-            int i=0;
-        }
-        
-        
-         if (ArticleVersionLastModifiedDate.equals("pair quotes"))
-        {
-            int i=0;
-        }
         String KnowledgeArticleID= metadata[7];
 
     /*
@@ -315,12 +410,102 @@ public class KCS1{
    
    
    
-     private static List<ArticleWithRating> readArticleWIthRatingsFromCSV(String fileName) 
+     private static List<ArticleWithRating> readArticleWithRatingsFromFile(String fileName) 
     { 
 
        List<ArticleWithRating> ratings = new ArrayList<>();
-       Path pathToFile = Paths.get(fileName);
+        ArrayList<String> list=new ArrayList<String>();//Creating arraylist  
+        list.add("Article Number");//Adding object in arraylist  
+        list.add("Title");  
+        list.add("Created By: Full Name");  
+        //Traversing list through Iterator  
+        Iterator itr=list.iterator(); 
+        int length = list.size();
+        System.out.println(length); 
+        while(itr.hasNext()){  
+            System.out.println(itr.next());  
+        }  
+                
+        try
+        {
+            //open the file (obtaining input bytes from a file)  
+            FileInputStream fs=new FileInputStream(new File("C:\\JavaProjects\\KCS1\\ratings.xls"));  
 
+            POIFSFileSystem fis = new POIFSFileSystem(fs);
+            //creating workbook instance that refers to .xls file  
+            HSSFWorkbook wb=new HSSFWorkbook(fis);   
+            //creating a Sheet object to retrieve the object  
+            HSSFSheet sheet=wb.getSheetAt(0);  
+            //evaluating cell type   
+            FormulaEvaluator formulaEvaluator=wb.getCreationHelper().createFormulaEvaluator();  
+            if (sheet.getRow(0).getPhysicalNumberOfCells()!=4)
+            {//check the number of columns of the file
+                AskForAuthorFile();
+            }
+            //TODO, we should get rid of the header row, but I suppose it will not harm us to have an 
+                    //additional author called author writing an article titled title... 
+            for(Row row: sheet)     //iteration over row using for each loop  
+            {  
+                int i=0;
+                String col[] = new String [4];
+                for(Cell cell: row)    //iteration over cell using for each loop  
+                {  
+                    switch(formulaEvaluator.evaluateInCell(cell).getCellType())  
+                    {  
+                        case Cell.CELL_TYPE_NUMERIC:   //field that represents numeric cell type  
+                        //getting the value of the cell as a number  
+                        //System.out.print(cell.getNumericCellValue()+ "HELLO\t\t");   
+                        int answer = (int) cell.getNumericCellValue();
+                        col[i] = ""+answer; // all the logic was previosuly done on strings. plugging new prototype to old code for now
+                        //to refafctor later
+                        break;  
+                        case Cell.CELL_TYPE_STRING:    //field that represents string cell type  
+                        //getting the value of the cell as a string  
+                        col[i] = cell.getStringCellValue();
+                        break;  
+                    }
+                  i++;
+              
+                }
+                  // do somethig with it
+                 ArticleWithRating rating = createArticeWithRating(col);
+
+                 // adding article into ArrayList 
+                 ratings.add(rating);
+            }
+
+        }
+        
+        catch( FileNotFoundException e    )
+        {
+            System.out.println("File not found");
+            System.out.println(e.getMessage());
+            AskForRatingsFile();
+        }
+        catch (IOException e)
+        {
+            String ioex = e.getMessage();
+            if (ioex.contains("Invalid header signature"))
+            {
+                System.out.println("The excel file produced by Salesforce is sually corrupt. \n"
+                        + "\t to fix it open it in Excel, chose Export\n"
+                        + "\t Chose : change file type]n"
+                        + "\t chose the *.xls\n"
+                        + "\t and save onto your same file name, overwriting your file with itself after this dummy excel export\n"
+                        + "\t it should fix the issue.\n");
+            }
+            else
+            {
+                System.out.println(e.getMessage());
+            }
+            AskForAuthorFile();
+        
+        }
+
+        
+        
+/*
+       Path pathToFile = Paths.get(fileName);
        // create an instance of BufferedReader 
        // using try with resource, Java 7 feature to close resources 
        try (BufferedReader br = Files.newBufferedReader(pathToFile, StandardCharsets.US_ASCII)) 
@@ -356,11 +541,66 @@ public class KCS1{
 
          ioe.printStackTrace();
 
-       } 
+       }
+       */
        return ratings;
 
    } 
-   
+ static void   AskForAuthorFile()
+    {
+        System.out.println("We are expectig a file containing information about the authors aof the articles");
+        System.out.println("It should be on the local directory where the application is running");
+        System.out.println("It should be called authors.txt");
+        System.out.println("It should have the following 3 columns : Article Number,	Title,	Created By: Full Name");
+ 	System.out.println("It is comming from the excel extract of a Salesforce report probably called something like KCSautoAuthor....");
+        System.out.println("Report Type: Troubleshooting articles");
+        System.out.println("Filtered By:   \n" +
+        "   	Product Family equals Kondor+ Clear \n" +
+        "   	AND Is Latest Version equals True Clear \n" +
+        "   	AND Product equals Trade Innovation Pre TI Plus versions,Trade Innovation TI PLUS 1,Trade Innovation TI PLUS 2,"
+                + "Trade Innovation TI PLUS 2 Global processing,Trade Innovation Trade Portal Interface (TPI) Clear ");
+        System.out.println("Time Frame : \n" +
+        "\tDate Field : Created Date\n" +
+        "\tRange : Current FY");
+    }
+ 
+ 
+ static void   AskForUsageFile()
+    {
+        System.out.println("We are expectig a file containing information about the authors aof the articles");
+        System.out.println("It should be on the local directory where the application is running");
+        System.out.println("It should be called authors.txt");
+        System.out.println("It should have the following 3 columns : \n\tArticle Number\n" +
+    "\tKnowledge Article\n" +
+    "\tTitle\n" +
+    "\tIssue Resolved\n" +
+    "\tArticle Rating");
+ 	System.out.println("It is comming from the excel extract of a Salesforce report probably called something like KCSautoAuthor....");
+        System.out.println("Report Type: Troubleshooting articles");
+        System.out.println("Filtered By:   \n" +
+        "   	Product Family equals Kondor+ Clear \n" +
+        "   	AND Is Latest Version equals True Clear \n" +
+        "   	AND Product equals Trade Innovation Pre TI Plus versions,Trade Innovation TI PLUS 1,Trade Innovation TI PLUS 2,"
+                + "Trade Innovation TI PLUS 2 Global processing,Trade Innovation Trade Portal Interface (TPI) Clear ");
+        System.out.println("Time Frame : \n" +
+        "\tDate Field : Created Date\n" +
+        "\tRange : from 01/09/2010 to end of current FY");
+    }
+ static void   AskForRatingsFile()
+    {
+        System.out.println("We are expectig a file containing information about the rating of the articles");
+        System.out.println("It should be on the local directory where the application is running");
+        System.out.println("It should be called ratings.xls");
+        System.out.println("It should have the following  columns :");
+ 	System.out.println("It is comming from the excel extract of a Salesforce report probably called something like KCSautoRating....");
+        System.out.println("Report Type: Community Article Comments");
+        System.out.println("Filtered By:   \n" +
+        "   	Product Name \n" );
+        System.out.println("Time Frame : \n" +
+        "\tDate Field : Created Date\n" +
+        "\tRange : Current FY");
+    }
+      
    
     private static ArticleWithRating createArticeWithRating(String[] metadata) 
    { 
@@ -384,6 +624,101 @@ public class KCS1{
      private static List<ArticleAuthor> readArticleAuthorFromCSV(String fileName) 
     { 
        List<ArticleAuthor> articleauthors = new ArrayList<>();
+       
+       
+        ArrayList<String> list=new ArrayList<String>();//Creating arraylist  
+        list.add("Article Number");//Adding object in arraylist  
+        list.add("Title");  
+        list.add("Created By: Full Name");
+
+        //Traversing list through Iterator  
+        Iterator itr=list.iterator(); 
+        int length = list.size();
+        System.out.println(length); 
+        while(itr.hasNext()){  
+            System.out.println(itr.next());  
+        }  
+        
+        
+      //  readInputFile("C:\\JavaProjects\\excelread2\\author.xls",list);
+
+        try
+        {
+            //open the file (obtaining input bytes from a file)  
+            FileInputStream fs=new FileInputStream(new File("C:\\JavaProjects\\KCS1\\author.xls"));  
+
+            POIFSFileSystem fis = new POIFSFileSystem(fs);
+            //creating workbook instance that refers to .xls file  
+            HSSFWorkbook wb=new HSSFWorkbook(fis);   
+            //creating a Sheet object to retrieve the object  
+            HSSFSheet sheet=wb.getSheetAt(0);  
+            //evaluating cell type   
+            FormulaEvaluator formulaEvaluator=wb.getCreationHelper().createFormulaEvaluator();  
+            if (sheet.getRow(0).getPhysicalNumberOfCells()!=3)
+            {//check the number of columns of the file
+                AskForAuthorFile();
+            }
+            //TODO, we should get rid of the header row, but I suppose it will not harm us to have an 
+                    //additional author called author writing an article titled title... 
+            for(Row row: sheet)     //iteration over row using for each loop  
+            {  
+                int i=0;
+                String col[] = new String [3];
+                for(Cell cell: row)    //iteration over cell using for each loop  
+                {  
+                    switch(formulaEvaluator.evaluateInCell(cell).getCellType())  
+                    {  
+                        case Cell.CELL_TYPE_NUMERIC:   //field that represents numeric cell type  
+                        //getting the value of the cell as a number  
+                        System.out.print(cell.getNumericCellValue()+ "HELLO\t\t");   
+                        break;  
+                        case Cell.CELL_TYPE_STRING:    //field that represents string cell type  
+                        //getting the value of the cell as a string  
+                        col[i] = cell.getStringCellValue();
+                        break;  
+                    }
+                  i++;
+              
+                }
+                  // do somethig with it
+                 ArticleAuthor articleauthor = createArticleAuthor(col);
+
+                 // adding article into ArrayList 
+                 articleauthors.add(articleauthor);
+     }
+
+        }
+        
+        catch( FileNotFoundException e    )
+        {
+            System.out.println("File not found");
+            System.out.println(e.getMessage());
+            AskForAuthorFile();
+        }
+        catch (IOException e)
+        {
+            String ioex = e.getMessage();
+            if (ioex.contains("Invalid header signature"))
+            {
+                System.out.println("The excel file produced by Salesforce is sually corrupt. \n"
+                        + "\t to fix it open it in Excel, chose Export\n"
+                        + "\t Chose : change file type]n"
+                        + "\t chose the *.xls\n"
+                        + "\t and save onto your same file name, overwriting your file with itself after this dummy excel export\n"
+                        + "\t it should fix the issue.\n");
+            }
+            else
+            {
+                System.out.println(e.getMessage());
+            }
+            AskForAuthorFile();
+        
+        }
+    
+
+
+       
+       /*
        Path pathToFile = Paths.get(fileName);
 
        // create an instance of BufferedReader 
@@ -414,7 +749,8 @@ public class KCS1{
        catch (IOException ioe) 
         { 
            ioe.printStackTrace();
-        } 
+        }
+       */
        return articleauthors;
 
    } 
@@ -450,17 +786,7 @@ class ArticleWithUsage
         this.ArticleVersionLastModifiedDate = ArticleVersionLastModifiedDate;
         this.ArticleVersionTitle = ArticleVersionTitle;
         this.KnowledgeArticleID = KnowledgeArticleID;
-        if(this.SubjectCaseOwner.equals("pair quotes"))
-        {
-            int i=0;
-        
-        }
-        
-         if(this.ArticleVersionLastModifiedBy.equals("pair quotes"))
-        {
-            int i=0;
-        
-        }
+    
         
    }
 } 
