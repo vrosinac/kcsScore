@@ -114,13 +114,20 @@ public class KCS1{
         for (ArticleWithUsage row : articles_withUsages) 
         { 
             newtitle=row.ArticleVersionTitle;
+            String id2 = row.CaseNumber;
+            
+            if (id2.equals("02277729"))
+            {
+                int stop=1;
+            }
             if( !newtitle.equals(previoustitle) && !previoustitle.isEmpty() )
             {
                 // before giving credit, we check how many times the article was referenced .... but we 
+               //credit(author,authorpoints,authorpoints + " " + previoustitle,0, "",0,"", 0,"");
                credit(author,authorpoints,authorpoints + " " + previoustitle,0, "",0,"", 0,"");
                authorpoints =0;
             }
-            author= row.CaseArticleCreatedBy;
+            author= row.CaseArticleCreatedBy;//  
             previoustitle= row.ArticleVersionTitle;
             authorpoints++;  // we get a point for own publishing and for each reuse of the article
         } 
@@ -133,6 +140,13 @@ public class KCS1{
         { 
             newtitle=row1.ArticleVersionTitle;
             newuser = row1.SubjectCaseOwner;
+            
+            String id3 = row1.CaseNumber;
+            if (id3.equals("02277729"))
+            {
+                int stop=1;
+            }
+        
             if( !newuser.equals(previoususer) && !previoususer.isEmpty() )
             {
                 if (reusepoints >0)
@@ -141,7 +155,7 @@ public class KCS1{
                         reusepoints =0;
                     }
             }
-            if (   !row1.FirstPublishedDate.equals(row1.LastPublishedDate) ) // TODO Carine
+                if (   !row1.FirstPublishedDate.equals(row1.CaseArticleCreatedDate) ) // TODO Carine
                 // first published <> last published = article was reused
             {
                     reusepoints= reusepoints + 2 ;  // we get 2 points reusing someoneelse's  article
@@ -153,7 +167,7 @@ public class KCS1{
         
         
         //----------------------- RATINGS   ----------------------
-        List<ArticleAuthor> Articleauthors = readArticleAuthorFromFile("");
+        List<ArticleAuthor> Articleauthors = readArticleAuthorFromFile("");// le nom du fichier  // les colones attendues
         List<ArticleWithRating> ArticleRatings = readArticleWithRatingsFromFile("");
         Collections.sort(ArticleRatings, new ArticleWithRating_comparator());
         
@@ -164,15 +178,28 @@ public class KCS1{
         for (ArticleWithRating r : ArticleRatings) 
         { 
             theauthor ="";
-            id = r.ArticleId;
             String ratedBy = r.CommunityArticleCommentOwnerName;
             char issuesolved_char =r.IssueResolved.toCharArray()[0];
             char rate_char =r.ArticleRating.toCharArray()[0];
             int rate = Character.getNumericValue(rate_char);
             int issuesolved = Character.getNumericValue(issuesolved_char);
+            id = r.ArticleId;
+            if(id.equals("Article Number"))
+            {
+                rate =0;
+                issuesolved =0;
+                        
+            }
             //System.out.println(" rated article id: " + id + " rating: " + rate + " solved?: "+ issuesolved ); 
             //we can't count the rating if on top of that the issue was solved.
             //In that case we only count the issue solved
+
+            if (id.equals("000016433"))
+            {
+            
+                int a=1;
+            }
+
             if (  !((ratedBy.equals(lastRatedBy) && (id == lastId)))   ) // we avoid duplicates
             {
                
@@ -193,6 +220,11 @@ public class KCS1{
                       theauthor = a.Author;
                     }
                 }
+                if(r.KnowledgeArticleTitle.equals("Knowledge Article Title"))
+                {
+                    int stop=1;
+                }   
+                               
                 if (theauthor.isEmpty())
                 {
                       theauthor ="NOT FOUND";
@@ -262,8 +294,128 @@ public class KCS1{
         catch (Exception e)
         {
         }
-    } 
-     
+    }
+    
+    
+    final int articleAuthor = 1;
+    final int articleWithUsage = 2;
+    final int articleWithRatings = 3;
+
+    /*
+    private static List<Object> readExcelFile(String fileName, int type) 
+    {
+        try {
+            FileInputStream fs;
+            ArrayList<String> listCol = new ArrayList<String>();//Creating arraylist  
+            Object itemLine;
+            ArrayList<Object> list;
+            switch (type)
+            {
+                case 1:
+                    list = new ArrayList<ArticleAuthor>();
+                    break;
+                case 2:
+                    list = new ArrayList<>();
+                    listCol.add("Case Number");//Adding object in arraylist  
+                    listCol.add("Subject");
+                    listCol.add("Case Owner");
+                    listCol.add("Case Article: Created By");
+                    listCol.add("Article Version: Last Modified By");
+                    listCol.add("Article Version: Last Modified Date");
+                    listCol.add("Article Version: Title");
+                    listCol.add("Knowledge Article ID");
+                     //open the file (obtaining input bytes from a file)  
+                    fs = new FileInputStream(new File("usage.xls"));
+
+                    break;
+                case 3:
+                    list = new ArrayList<>();
+                    break;
+           }
+
+        
+        //Traversing list through Iterator  
+        //Iterator itr = list.iterator();
+        //int length = list.size();
+        // System.out.println(length); 
+        //   while(itr.hasNext()){  
+         //   System.out.println(itr.next());  
+        //}  
+         
+            //open the file (obtaining input bytes from a file)  
+            //FileInputStream fs = new FileInputStream(new File("usage.xls"));
+
+            POIFSFileSystem fis = new POIFSFileSystem(fs);
+            //creating workbook instance that refers to .xls file  
+            HSSFWorkbook wb = new HSSFWorkbook(fis);
+            //creating a Sheet object to retrieve the object  
+            HSSFSheet sheet = wb.getSheetAt(0);
+            //evaluating cell type   
+            FormulaEvaluator formulaEvaluator = wb.getCreationHelper().createFormulaEvaluator();
+            if (sheet.getRow(0).getPhysicalNumberOfCells() != 10) {//check the number of columns of the file
+                AskForUsageFile();
+            }
+            //TODO, we should get rid of the header row, but I suppose it will not harm us to have an 
+            //additional author called author writing an article titled title... 
+            for (Row row : sheet) //iteration over row using for each loop  
+            {
+                int i = 0;
+                String col[] = new String[10];
+                for (Cell cell : row) //iteration over cell using for each loop  
+                {
+                    switch (formulaEvaluator.evaluateInCell(cell).getCellType()) {
+                        case Cell.CELL_TYPE_NUMERIC:   //field that represents numeric cell type  
+                            //getting the value of the cell as a number  
+                            int answer = (int) cell.getNumericCellValue();
+                            col[i] = "" + answer; // all the logic was previosuly done on strings. plugging new prototype to old code for now
+                            //to refafctor later
+                            break;
+                        case Cell.CELL_TYPE_STRING:    //field that represents string cell type  
+                            //getting the value of the cell as a string  
+                            col[i] = cell.getStringCellValue();
+                            break;
+                    }
+                    i++;
+                }
+                
+            switch (type)
+            {
+                case 1:
+                    break;
+                case 2:
+                    itemLine = createArticleWithUsage(col);
+                    break;
+            }
+                // do somethig with it
+                //itemLine = createArticleWithUsage(col);
+                // adding article into ArrayList 
+                list.add(itemLine);
+
+            }
+        } catch (FileNotFoundException e) {
+            System.out.println("File not found");
+            System.out.println(e.getMessage());
+            AskForAuthorFile();
+        } catch (IOException e) {
+            String ioex = e.getMessage();
+            if (ioex.contains("Invalid header signature")) {
+                System.out.println("The excel file produced by Salesforce is sually corrupt. \n"
+                        + "\t to fix it open it in Excel, chose Export\n"
+                        + "\t Chose : change file type]n"
+                        + "\t chose the *.xls\n"
+                        + "\t and save onto your same file name, overwriting your file with itself after this dummy excel export\n"
+                        + "\t it should fix the issue.\n");
+            } else {
+                System.out.println(e.getMessage());
+            }
+            AskForUsageFile();
+
+        }
+
+        return list;
+
+    }
+*/
     private static List<ArticleWithUsage> readArticlesWithUsageFromFile(String fileName) 
     { 
 
@@ -273,7 +425,7 @@ public class KCS1{
         list.add("Case Number");//Adding object in arraylist  
         list.add("Subject");
         list.add("Case Owner");
-        list.add("Case Article: Created By");  
+        list.add("Article Version: Created By");  
 	list.add("Article Version: Last Modified By");
 	list.add("Article Version: Last Modified Date");
 	list.add("Article Version: Title");
@@ -373,14 +525,14 @@ public class KCS1{
         String ArticleVersionLastModifiedBy= metadata[4];
         String ArticleVersionLastModifiedDate= metadata[5];
         String FirstPublishedDate= metadata[6];
-        String LastPublishedDate= metadata[7];
+        String CaseArticleCreatedDate = metadata[7];
         String ArticleVersionTitle= metadata[8];
         String KnowledgeArticleID= metadata[9];
         
 
 
        // create and return article of this metadata 
-       return new ArticleWithUsage(CaseNumber,   SubjectCaseOwner, CaseArticleCreatedBy,    ArticleVersionLastModifiedBy, ArticleVersionLastModifiedDate, FirstPublishedDate, LastPublishedDate, ArticleVersionTitle,    KnowledgeArticleID);
+       return new ArticleWithUsage(CaseNumber,   SubjectCaseOwner, CaseArticleCreatedBy,    ArticleVersionLastModifiedBy, ArticleVersionLastModifiedDate, FirstPublishedDate, CaseArticleCreatedDate, ArticleVersionTitle,    KnowledgeArticleID);
 
    }
    
@@ -554,12 +706,10 @@ public class KCS1{
    
     
     
-    
-    
-   
+   // we need to pass the type of object and the filename, maybe the column names for validatin
      private static List<ArticleAuthor> readArticleAuthorFromFile(String fileName) 
     { 
-       List<ArticleAuthor> articleauthors = new ArrayList<>();
+       List<ArticleAuthor> articleauthors = new ArrayList<ArticleAuthor>();
        
        
         ArrayList<String> list=new ArrayList<String>();//Creating arraylist  
@@ -594,8 +744,14 @@ public class KCS1{
             }
             //TODO, we should get rid of the header row, but I suppose it will not harm us to have an 
                     //additional author called author writing an article titled title... 
+            int rown=0;
             for(Row row: sheet)     //iteration over row using for each loop  
             {  
+                rown= rown+1;
+                if (rown==2212)
+                {
+                    int stop=1;
+                }
                 int i=0;
                 String col[] = new String [3];
                 for(Cell cell: row)    //iteration over cell using for each loop  
@@ -609,17 +765,21 @@ public class KCS1{
                         case Cell.CELL_TYPE_STRING:    //field that represents string cell type  
                         //getting the value of the cell as a string  
                         col[i] = cell.getStringCellValue();
+                        if (col[i].equals("000016433"))
+                        {
+                            int stop=2;
+                        }
                         break;  
                     }
                   i++;
               
                 }
-                  // do somethig with it
-                 ArticleAuthor articleauthor = createArticleAuthor(col);
+                  // do somethig with
+                 ArticleAuthor articleauthor =  new ArticleAuthor(col);
 
                  // adding article into ArrayList 
                  articleauthors.add(articleauthor);
-     }
+            }
 
         }
         
@@ -654,12 +814,7 @@ public class KCS1{
    } 
    
    
-    private static ArticleAuthor createArticleAuthor(String[] metadata) 
-   { 
-       String Id= metadata[0];
-       String Author= metadata[2];
-       return new ArticleAuthor(Id, Author);
-    }
+    
 } 
 
 
@@ -671,13 +826,13 @@ class ArticleWithUsage
     String ArticleVersionLastModifiedBy;
     String ArticleVersionLastModifiedDate;
     String FirstPublishedDate;
-    String LastPublishedDate;
+    String CaseArticleCreatedDate;
     String ArticleVersionTitle;
     String KnowledgeArticleID;
     
 
     public ArticleWithUsage(String CaseNumber,   String SubjectCaseOwner,String CaseArticleCreatedBy,   String ArticleVersionLastModifiedBy,
-                            String ArticleVersionLastModifiedDate, String FirstPublishedDate,String LastPublishedDate, 
+                            String ArticleVersionLastModifiedDate, String FirstPublishedDate,String CaseArticleCreatedDate, 
                             String ArticleVersionTitle,  String  KnowledgeArticleID) 
     { 
 
@@ -687,7 +842,7 @@ class ArticleWithUsage
         this.ArticleVersionLastModifiedBy =ArticleVersionLastModifiedBy;
         this.ArticleVersionLastModifiedDate = ArticleVersionLastModifiedDate;
         this.FirstPublishedDate = FirstPublishedDate;
-        this.LastPublishedDate = LastPublishedDate;
+        this.CaseArticleCreatedDate = CaseArticleCreatedDate;
         this.ArticleVersionTitle = ArticleVersionTitle;
         this.KnowledgeArticleID = KnowledgeArticleID;
     
@@ -729,12 +884,42 @@ class ArticleAuthor   /// SPEC QUESTION  what happens if the rating is on an art
 
         this.Id = Id;
         this.Author = Author;
-            
-        if(this.Author.equals("pair quotes"))
-        {
-            int i=0;
-        }
-   } 
+   }
+    public ArticleAuthor(String[] metadata) 
+   { 
+       this.Id= metadata[0];
+       /*if( (metadata[3] != null) && !metadata[3].isEmpty() )
+       {
+        this.Author= metadata[3];
+       
+       
+       }
+       else{*/
+           this.Author= metadata[2];
+      /* }*/
+       //return new ArticleAuthor(Id, Author);
+    }
+    
+    public ArticleAuthor createArticleAuthor(String metadata [])
+    {
+        return new ArticleAuthor(metadata);
+    }
+    
+    public String fromFile()
+    {
+        return "authors.xls";
+    }
+    public String [] arguments()
+    {
+    
+        String args[] = new String[3]; /*String[4];*/
+        args[0]="Article Number";
+        args[1]="Title";
+        args[2]="Created By: Full Name";
+        
+        return args;
+        
+    }
 }
 
 
