@@ -34,9 +34,9 @@ public class KCS1{
     private static void credit(String name, int authorpoints, String authorDetail, int  reusepoints, String reuseDetail,
                                int ratingpoints, String ratingDetails, int issuesolvedpoints, String solvedDetails)
     {
-        if (name.equals("\"Carine Gheron\""))
+        if (name.equals("Andrei Nicolae"))
         {
-            System.out.println("Carine Gheron: author +" + authorpoints + " reuse +" + reusepoints + " rating+" +ratingpoints + " solved+" + issuesolvedpoints);
+            int stop =1;
         }
         name = name.replaceAll("\"", "");
         boolean done=false;
@@ -102,6 +102,8 @@ public class KCS1{
     
     public static void main(String... args) 
     { 
+        List<ArticleAuthor> Articleauthors = readArticleAuthorFromFile("");// le nom du fichier  // les colones attendues
+        
         teamScores = new ArrayList<>();
             
         List<ArticleWithUsage> articles_withUsages = readArticlesWithUsageFromFile("");
@@ -109,14 +111,15 @@ public class KCS1{
         //sort by article and author, do one run of credits   - we have to detect manually the change of author
         Collections.sort(articles_withUsages, new ArticleAuthor_comparator());
         String newtitle="", previoustitle="";
+        String authorNew="";
         String author="";
         int authorpoints =0;
         for (ArticleWithUsage row : articles_withUsages) 
         { 
             newtitle=row.ArticleVersionTitle;
-            String id2 = row.CaseNumber;
+            String id2 = row.KnowledgeArticleID;
             
-            if (id2.equals("02277729"))
+            if (newtitle.equals("Summary for UTZA25R Maker Checker EOD process **KEEP AS INTERNAL**"))
             {
                 int stop=1;
             }
@@ -127,10 +130,55 @@ public class KCS1{
                credit(author,authorpoints,authorpoints + " " + previoustitle,0, "",0,"", 0,"");
                authorpoints =0;
             }
-            author= row.CaseArticleCreatedBy;//  
+            author= row.CaseArticleCreatedBy;//  TODO HERE INSTEAD WE SHOULD LOOK UP ON AUTHORS.XLS FOR AHTOR OR HSITORICAL AUTHOR
+                boolean found =false;
+                for (ArticleAuthor a : Articleauthors)
+                {
+                    if (a.Title.equals(newtitle))
+                    {
+                       found = true;
+                       author = a.Author;
+                      /* if (!authorNew.equals(author))
+                       {
+                          found=false;
+                       }*/
+                    }
+                }
+                if (found == false) //found author for creation points
+                {
+                    for (ArticleAuthor a : Articleauthors)
+                    {
+                        if (a.Id.equals(id2))
+                        {
+                           if (!author.isEmpty())
+                           {
+                                author = a.Author;
+                                found = true;
+                           }
+                           else
+                           {
+                               found=false;// in the end we keep the one from the usage.xls file 
+                           }    
+                        }
+                        
+                    }
+
+                }
+                // END OF TODO
+            if (found==false)
+            {
+                int notfound =0;
+            }
             previoustitle= row.ArticleVersionTitle;
+            if (previoustitle.equals("CSummary for UTZA25R Maker Checker EOD process **KEEP AS INTERNAL**"))
+            {
+                int stop=1;
+            }
             authorpoints++;  // we get a point for own publishing and for each reuse of the article
-        } 
+        }
+        //last line of teh file
+        credit(author,authorpoints,authorpoints + " " + previoustitle,0, "",0,"", 0,"");
+        
         
         Collections.sort(articles_withUsages, new ArticleWithUsage_comparator());
         int reusepoints=0;
@@ -139,6 +187,28 @@ public class KCS1{
         for (ArticleWithUsage row1 : articles_withUsages) 
         { 
             newtitle=row1.ArticleVersionTitle;
+             if (newtitle.equals("Summary for UTZA25R Maker Checker EOD process **KEEP AS INTERNAL**"))
+            {
+                int stop=1;
+            }
+             
+             /* Wendy needs to skeep the following
+                •00008533 –  Misys Customer Support Guide to Case Severity Usage -we attach when customers log a critical severity case which is not really critical 
+                •00009325 – Process in Manually Archiving a Retail Loan **KEEP AS INTERNAL** - is a collection of database updates used in emergencies so the system can continue 
+                •00018364 –  AHS Customer Support team - list of LIVE and CRITICAL issues - link to confluence **KEEP AS INTERNAL**  - is a link from SFDC to an old confluence spreadsheet 
+                •00022685 –  Equation COP SWIFT Presentations ** KEEP AS INTERNAL ** -is a link from SFDC to CS training notes 
+             */
+             if (newtitle.equals("Misys Customer Support Guide to Case Severity Usage") ||
+                 newtitle.equals("Process in Manually Archiving a Retail Loan **KEEP AS INTERNAL**") ||
+                 newtitle.equals("AHS Customer Support team - list of LIVE and CRITICAL issues") ||
+                 newtitle.equals("Equation COP SWIFT Presentations ** KEEP AS INTERNAL **")  )
+            {
+                int stop=1;
+                continue;
+                
+            }
+             
+             
             newuser = row1.SubjectCaseOwner;
             
             String id3 = row1.CaseNumber;
@@ -147,7 +217,8 @@ public class KCS1{
                 int stop=1;
             }
         
-            if( !newuser.equals(previoususer) && !previoususer.isEmpty() )
+            if(  (  !newtitle.equals(previoustitle)     )       ||
+                    (    newtitle.equals(previoustitle) &&   (!newuser.equals(previoususer) && !previoususer.isEmpty()) )  )
             {
                 if (reusepoints >0)
                     {
@@ -157,22 +228,42 @@ public class KCS1{
             }
                 if (   !row1.FirstPublishedDate.equals(row1.CaseArticleCreatedDate) ) // TODO Carine
                 // first published <> last published = article was reused
-            {
-                    reusepoints= reusepoints + 2 ;  // we get 2 points reusing someoneelse's  article
+                {
+                    //check if the user is also the author (in that case we add only one point for the usage, otherwise we add 2
+                    
+                    boolean found =false;
+                    for (ArticleAuthor a : Articleauthors )
+                    {
+                        if (a.Title.equals(newtitle)&& a.Author.equals(newuser))
+                        {
+                           found = true;
+                         
+                        }
+                    }
+                    if (found == true)  //found author when checking reuse
+                    {
+                        reusepoints= reusepoints + 1 ;
+                    }
+                    else
+                    {
+                        reusepoints= reusepoints + 2 ;  // we get 2 points reusing someoneelse's  article
+                    }
             }
             previoususer = row1.SubjectCaseOwner;
             previoustitle=row1.ArticleVersionTitle;
         }
-    
+        //for the last row of the file
+        credit(previoususer,0, "", reusepoints,reusepoints + " " + previoustitle,0,"",0,"");
+                       
         
         
         //----------------------- RATINGS   ----------------------
-        List<ArticleAuthor> Articleauthors = readArticleAuthorFromFile("");// le nom du fichier  // les colones attendues
+        //List<ArticleAuthor> Articleauthors = readArticleAuthorFromFile("");// le nom du fichier  // les colones attendues
         List<ArticleWithRating> ArticleRatings = readArticleWithRatingsFromFile("");
         Collections.sort(ArticleRatings, new ArticleWithRating_comparator());
         
-        String id ="";
-        String lastId="qwertyytrewq"; //for sure does not exist
+        String number ="";
+        String lastNumber="qwertyytrewq"; //for sure does not exist
         String lastRatedBy="qwertyytrewq"; //for sure does not exist
         String theauthor ="";
         for (ArticleWithRating r : ArticleRatings) 
@@ -183,8 +274,8 @@ public class KCS1{
             char rate_char =r.ArticleRating.toCharArray()[0];
             int rate = Character.getNumericValue(rate_char);
             int issuesolved = Character.getNumericValue(issuesolved_char);
-            id = r.ArticleId;
-            if(id.equals("Article Number"))
+            number = r.ArticleNumber;// ISSUE HERE
+            if(number.equals("Article Number"))
             {
                 rate =0;
                 issuesolved =0;
@@ -194,13 +285,13 @@ public class KCS1{
             //we can't count the rating if on top of that the issue was solved.
             //In that case we only count the issue solved
 
-            if (id.equals("000016433"))
+            if (number.equals("000016433"))
             {
             
                 int a=1;
             }
 
-            if (  !((ratedBy.equals(lastRatedBy) && (id == lastId)))   ) // we avoid duplicates
+            if (  !((ratedBy.equals(lastRatedBy) && (number == lastNumber)))   ) // we avoid duplicates
             {
                
                 if (issuesolved>0)
@@ -215,7 +306,7 @@ public class KCS1{
 
                 for (ArticleAuthor a : Articleauthors)
                 {
-                    if (a.Id.equals(id))
+                    if (a.Number.equals(number))
                     {
                       theauthor = a.Author;
                     }
@@ -223,7 +314,15 @@ public class KCS1{
                 if(r.KnowledgeArticleTitle.equals("Knowledge Article Title"))
                 {
                     int stop=1;
+                }
+                if(r.KnowledgeArticleTitle.equals("Summary for UTZA25R Maker Checker EOD process **KEEP AS INTERNAL**"))
+                {
+                    int stop=1;
                 }   
+                   
+                
+                
+                
                                
                 if (theauthor.isEmpty())
                 {
@@ -233,9 +332,8 @@ public class KCS1{
                 {
                      //      System.out.println(" credits for author: " + theauthor);
                 }    
-                if (!theauthor.equals("Created By: Full Name")) //the colum names are showing up as data rows
-                {
-                 
+                if (!theauthor.equals("Created By: Full Name") ) //the colum names are showing up as data rows
+                {      
                  credit(theauthor,0, "", 0, " " ,rate, r.KnowledgeArticleTitle ,4*issuesolved, r.KnowledgeArticleTitle);
                 }
             }
@@ -243,7 +341,7 @@ public class KCS1{
             {
                 System.out.println("we avoided one duplicate rating: \'" + r.KnowledgeArticleTitle + "\' rated by: " + ratedBy);
             }
-            lastId = id;
+            lastNumber = number;
             lastRatedBy = ratedBy;        
         }
         
@@ -460,7 +558,7 @@ public class KCS1{
             for(Row row: sheet)     //iteration over row using for each loop  
             {  
                 int i=0;
-                String col[] = new String [10];
+                String col[] = new String [11];
                 for(Cell cell: row)    //iteration over cell using for each loop  
                 {  
                     switch(formulaEvaluator.evaluateInCell(cell).getCellType())  
@@ -526,8 +624,8 @@ public class KCS1{
         String ArticleVersionLastModifiedDate= metadata[5];
         String FirstPublishedDate= metadata[6];
         String CaseArticleCreatedDate = metadata[7];
-        String ArticleVersionTitle= metadata[8];
-        String KnowledgeArticleID= metadata[9];
+        String ArticleVersionTitle= metadata[9];
+        String KnowledgeArticleID= metadata[10];
         
 
 
@@ -707,7 +805,8 @@ public class KCS1{
     
     
    // we need to pass the type of object and the filename, maybe the column names for validatin
-     private static List<ArticleAuthor> readArticleAuthorFromFile(String fileName) 
+     
+    private static List<ArticleAuthor> readArticleAuthorFromFile(String fileName) 
     { 
        List<ArticleAuthor> articleauthors = new ArrayList<ArticleAuthor>();
        
@@ -716,6 +815,7 @@ public class KCS1{
         list.add("Article Number");//Adding object in arraylist  
         list.add("Title");  
         list.add("Created By: Full Name");
+        list.add("Troubleshooting ID");
 
         //Traversing list through Iterator  
         Iterator itr=list.iterator(); 
@@ -753,7 +853,7 @@ public class KCS1{
                     int stop=1;
                 }
                 int i=0;
-                String col[] = new String [3];
+                String col[] = new String [5]; // 3 OR 4 OR 5
                 for(Cell cell: row)    //iteration over cell using for each loop  
                 {  
                     switch(formulaEvaluator.evaluateInCell(cell).getCellType())  
@@ -854,7 +954,7 @@ class ArticleWithUsage
 
 class ArticleWithRating 
 { 
-    String ArticleId;
+    String ArticleNumber;
     String KnowledgeArticleTitle;
     String IssueResolved;
     String ArticleRating;
@@ -863,7 +963,7 @@ class ArticleWithRating
     public ArticleWithRating(String ArticleId, String KnowledgeArticleTitle,   String  IssueResolved,String ArticleRating, String CommunityArticleCommentOwnerName ) 
    { 
 
-        this.ArticleId=ArticleId;
+        this.ArticleNumber=ArticleId;
         this.KnowledgeArticleTitle = KnowledgeArticleTitle;
         this.IssueResolved = IssueResolved;
         this.ArticleRating = ArticleRating;
@@ -876,28 +976,43 @@ class ArticleWithRating
 
 class ArticleAuthor   /// SPEC QUESTION  what happens if the rating is on an article reused?  Should it not count for the reuser too? 
 { 
+    String Number;
     String Id;
     String Author;
+    String Title;
         
-    public ArticleAuthor(String Id,   String Author ) 
+    public ArticleAuthor(String Number,   String Author, String title, String Id ) 
    { 
 
         this.Id = Id;
+        
+        this.Number = Number;
         this.Author = Author;
+        this.Title=title;
    }
     public ArticleAuthor(String[] metadata) 
    { 
-       this.Id= metadata[0];
-       /*if( (metadata[3] != null) && !metadata[3].isEmpty() )
+       this.Number= metadata[0];
+       if( (metadata[3] != null) && !metadata[3].isEmpty() )
        {
         this.Author= metadata[3];
        
        
        }
-       else{*/
-           this.Author= metadata[2];
-      /* }*/
+       else{
+           if( (metadata[2] != null) && !metadata[2].isEmpty() )
+           {
+               this.Author= metadata[2];
+           }
+           else
+           {
+             this.Author= "NOT FOUND";
+           }
+       }
+       
        //return new ArticleAuthor(Id, Author);
+       this.Title= metadata[1];
+       this.Id= metadata[4];
     }
     
     public ArticleAuthor createArticleAuthor(String metadata [])
