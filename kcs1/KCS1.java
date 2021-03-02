@@ -31,7 +31,7 @@ import org.apache.poi.poifs.filesystem.POIFSFileSystem;
 public class KCS1{ 
     
     static List<ConsultantScore> teamScores;
-    private static void credit(String name, int authorpoints, String authorDetail, int  reusepoints, String reuseDetail,
+    private static void credit(String name,String product, int authorpoints, String authorDetail, int  reusepoints, String reuseDetail,
                                int ratingpoints, String ratingDetails, int issuesolvedpoints, String solvedDetails)
     {
         if (name.equals("Andrei Nicolae"))
@@ -77,7 +77,7 @@ public class KCS1{
                             solvedDetails = "<br>" + issuesolvedpoints + " " + solvedDetails ;
                     }
                     
-                    ConsultantScore c2 = new ConsultantScore(c1.Name,c1.totalpoints+ reusepoints + authorpoints + ratingpoints+ issuesolvedpoints,
+                    ConsultantScore c2 = new ConsultantScore(c1.Name, c1.product, c1.totalpoints+ reusepoints + authorpoints + ratingpoints+ issuesolvedpoints,
                             c1.authorpoints+ authorpoints,
                             c1.authorDetail  + authorDetail, c1.reusepoints+ reusepoints,
                             c1.reuseDetail + reuseDetail, 
@@ -90,8 +90,12 @@ public class KCS1{
             }
         
             if (done==false)
-            {    
-                ConsultantScore consultant = new ConsultantScore (name,authorpoints + reusepoints + ratingpoints + issuesolvedpoints ,authorpoints, authorDetail, 
+            {   
+                if (product.equals(""))
+                {
+                int stop =1;
+                }
+                ConsultantScore consultant = new ConsultantScore (name,product, authorpoints + reusepoints + ratingpoints + issuesolvedpoints ,authorpoints, authorDetail, 
                         reusepoints,reuseDetail,ratingpoints, ratingDetails, issuesolvedpoints, solvedDetails );
                 teamScores.add(consultant);
              }
@@ -113,6 +117,8 @@ public class KCS1{
         String newtitle="", previoustitle="";
         String authorNew="";
         String author="";
+        String product ="";
+        String previousProduct ="";
         int authorpoints =0;
         for (ArticleWithUsage row : articles_withUsages) 
         { 
@@ -127,11 +133,17 @@ public class KCS1{
             {
                 // before giving credit, we check how many times the article was referenced .... but we 
                //credit(author,authorpoints,authorpoints + " " + previoustitle,0, "",0,"", 0,"");
-               credit(author,authorpoints,authorpoints + " " + previoustitle,0, "",0,"", 0,"");
+               
+                if (author.equals("Esner Fernandez"))
+                {
+                    int stop=1;
+                }
+               credit(author , product ,authorpoints,authorpoints + " " + previoustitle,0, "",0,"", 0,"");
                authorpoints =0;
             }
             author= row.CaseArticleCreatedBy;//  TODO HERE INSTEAD WE SHOULD LOOK UP ON AUTHORS.XLS FOR AHTOR OR HSITORICAL AUTHOR
-                boolean found =false;
+            product = row.ReportingProduct;
+            boolean found =false;
                 for (ArticleAuthor a : Articleauthors)
                 {
                     if (a.Title.equals(newtitle))
@@ -169,6 +181,7 @@ public class KCS1{
             {
                 int notfound =0;
             }
+            previousProduct = row.ReportingProduct;
             previoustitle= row.ArticleVersionTitle;
             if (previoustitle.equals("CSummary for UTZA25R Maker Checker EOD process **KEEP AS INTERNAL**"))
             {
@@ -177,13 +190,18 @@ public class KCS1{
             authorpoints++;  // we get a point for own publishing and for each reuse of the article
         }
         //last line of teh file
-        credit(author,authorpoints,authorpoints + " " + previoustitle,0, "",0,"", 0,"");
+         if (author.equals("Esner Fernandez"))
+                {
+                    int stop=1;
+                }
+        credit(author  , previousProduct ,authorpoints,authorpoints + " " + previoustitle,0, "",0,"", 0,"");
         
         
         Collections.sort(articles_withUsages, new ArticleWithUsage_comparator());
         int reusepoints=0;
         String previoususer="", newuser ="";
         previoustitle="";
+        previousProduct="";
         for (ArticleWithUsage row1 : articles_withUsages) 
         { 
             newtitle=row1.ArticleVersionTitle;
@@ -222,7 +240,11 @@ public class KCS1{
             {
                 if (reusepoints >0)
                     {
-                        credit(previoususer,0, "", reusepoints,reusepoints + " " + previoustitle,0,"",0,"");
+                         if (previoususer.equals("Esner Fernandez"))
+                        {
+                         int stop=1;
+                        }
+                        credit(previoususer, previousProduct, 0, "", reusepoints,reusepoints + " " + previoustitle,0,"",0,"");
                         reusepoints =0;
                     }
             }
@@ -251,9 +273,14 @@ public class KCS1{
             }
             previoususer = row1.SubjectCaseOwner;
             previoustitle=row1.ArticleVersionTitle;
+            previousProduct = row1.ReportingProduct;
         }
         //for the last row of the file
-        credit(previoususer,0, "", reusepoints,reusepoints + " " + previoustitle,0,"",0,"");
+         if (previoususer.equals("Esner Fernandez"))
+         {
+            int stop=1;
+        }
+        credit(previoususer,previousProduct, 0, "", reusepoints,reusepoints + " " + previoustitle,0,"",0,"");
                        
         
         
@@ -309,6 +336,7 @@ public class KCS1{
                     if (a.Number.equals(number))
                     {
                       theauthor = a.Author;
+                      
                     }
                 }
                 if(r.KnowledgeArticleTitle.equals("Knowledge Article Title"))
@@ -334,7 +362,12 @@ public class KCS1{
                 }    
                 if (!theauthor.equals("Created By: Full Name") ) //the colum names are showing up as data rows
                 {      
-                 credit(theauthor,0, "", 0, " " ,rate, r.KnowledgeArticleTitle ,4*issuesolved, r.KnowledgeArticleTitle);
+                    
+                     if (theauthor.equals("Esner Fernandez"))
+                {
+                    int stop=1;
+                }
+                 credit(theauthor,"", 0, "", 0, " " ,rate, r.KnowledgeArticleTitle ,4*issuesolved, r.KnowledgeArticleTitle);
                 }
             }
             else
@@ -369,13 +402,15 @@ public class KCS1{
 "<table  style=\"width:100%;height:5%\">\n" +
 "<colgroup   id=\"grad1\"> \n" +
 "<col  width=\"10%\"  >\n" +
+"<col  width=\"10%\"   >\n" +
 "<col  width=\"5%\"   >\n" +
-"<col  width=\"20%\"  >\n" +
-"<col  width=\"20%\"  >\n" +
-"<col  width=\"20%\"  >\n" +
-"<col  width=\"20%\"  >\n" +
+"<col  width=\"18%\"  >\n" +
+"<col  width=\"18%\"  >\n" +
+"<col  width=\"18%\"  >\n" +
+"<col  width=\"17%\"  >\n" +
 "</colgroup>\n" +
 "<th align=\"left\"style=\"color:grey\" > &nbsp; Name  </th>\n" +
+"<th align=\"left\"style=\"color:grey\" > &nbsp; Product  </th>\n" +
 "<th align=\"center\" style=\"color:grey\"> score </th>\n" +
 "<th align=\"left\" > author of article</th>\n" +
 "<th align=\"left\" > article reuse </th>\n" +
@@ -526,8 +561,10 @@ public class KCS1{
         list.add("Article Version: Created By");  
 	list.add("Article Version: Last Modified By");
 	list.add("Article Version: Last Modified Date");
-	list.add("Article Version: Title");
+	list.add("Reporting Product");
+        list.add("Article Version: Title");
 	list.add("Knowledge Article ID");
+	
 
 	//Traversing list through Iterator  
         Iterator itr=list.iterator(); 
@@ -558,7 +595,7 @@ public class KCS1{
             for(Row row: sheet)     //iteration over row using for each loop  
             {  
                 int i=0;
-                String col[] = new String [11];
+                String col[] = new String [12];
                 for(Cell cell: row)    //iteration over cell using for each loop  
                 {  
                     switch(formulaEvaluator.evaluateInCell(cell).getCellType())  
@@ -624,13 +661,14 @@ public class KCS1{
         String ArticleVersionLastModifiedDate= metadata[5];
         String FirstPublishedDate= metadata[6];
         String CaseArticleCreatedDate = metadata[7];
-        String ArticleVersionTitle= metadata[9];
-        String KnowledgeArticleID= metadata[10];
+        String ReportingProduct = metadata[9];
+        String ArticleVersionTitle= metadata[10];
+        String KnowledgeArticleID= metadata[11];
         
 
 
        // create and return article of this metadata 
-       return new ArticleWithUsage(CaseNumber,   SubjectCaseOwner, CaseArticleCreatedBy,    ArticleVersionLastModifiedBy, ArticleVersionLastModifiedDate, FirstPublishedDate, CaseArticleCreatedDate, ArticleVersionTitle,    KnowledgeArticleID);
+       return new ArticleWithUsage(CaseNumber,   SubjectCaseOwner, CaseArticleCreatedBy,    ArticleVersionLastModifiedBy, ArticleVersionLastModifiedDate, FirstPublishedDate, CaseArticleCreatedDate, ArticleVersionTitle,    KnowledgeArticleID, ReportingProduct);
 
    }
    
@@ -927,13 +965,14 @@ class ArticleWithUsage
     String ArticleVersionLastModifiedDate;
     String FirstPublishedDate;
     String CaseArticleCreatedDate;
+    String ReportingProduct;
     String ArticleVersionTitle;
     String KnowledgeArticleID;
     
 
     public ArticleWithUsage(String CaseNumber,   String SubjectCaseOwner,String CaseArticleCreatedBy,   String ArticleVersionLastModifiedBy,
                             String ArticleVersionLastModifiedDate, String FirstPublishedDate,String CaseArticleCreatedDate, 
-                            String ArticleVersionTitle,  String  KnowledgeArticleID) 
+                            String ArticleVersionTitle,  String  KnowledgeArticleID , String ReportingProduct) 
     { 
 
         this.CaseNumber = CaseNumber;
@@ -945,7 +984,7 @@ class ArticleWithUsage
         this.CaseArticleCreatedDate = CaseArticleCreatedDate;
         this.ArticleVersionTitle = ArticleVersionTitle;
         this.KnowledgeArticleID = KnowledgeArticleID;
-    
+        this.ReportingProduct = ReportingProduct;
         
    }
 } 
@@ -1042,6 +1081,7 @@ class ArticleAuthor   /// SPEC QUESTION  what happens if the rating is on an art
 class ConsultantScore
 { 
     String Name;
+    String product;
     int totalpoints;
     int authorpoints;
     String authorDetail;
@@ -1054,7 +1094,7 @@ class ConsultantScore
     String solvedDetails;
     
     
-    public ConsultantScore( String Name, int totalpoints, int authorpoints, String authorDetails, int reusepoints, String reuseDetails,
+    public ConsultantScore( String Name,String product, int totalpoints, int authorpoints, String authorDetails, int reusepoints, String reuseDetails,
     int ratingpoints, String ratingDetails,   int issuesolvedpoints,String solvedDetails) 
    { 
         this.Name = Name;
@@ -1068,6 +1108,9 @@ class ConsultantScore
         this.ratingDetails= ratingDetails;
         this.issuesolvedpoints= issuesolvedpoints;
         this.solvedDetails= solvedDetails;
+        //************
+            this.product = product;
+        
         
         if(this.Name.equals("pair quotes"))
         {
@@ -1113,16 +1156,17 @@ class ConsultantScore
                  +*/
                         "<table style=\"width:100%\" class=\"myTable\"><colgroup>"
                 + " <col  width=\"10%\" >"
+                + "<col  width=\"10%\"    >"  //
                 + "<col  width=\"5%\"    >"  //
-                + "<col  width=\"20%\"   >" //style=\"background-color:lavender\"
-                + "<col  width=\"20%\"  >" // style=\"background-color:aliceblue\"
-                + "<col  width=\"20%\"   >" // style=\"background-color:cornsilk\"
-                + "<col  width=\"20%\"   >" //style=\"background-color:lightcyan\
+                + "<col  width=\"18%\"   >" //style=\"background-color:lavender\"
+                + "<col  width=\"18%\"  >" // style=\"background-color:aliceblue\"
+                + "<col  width=\"18%\"   >" // style=\"background-color:cornsilk\"
+                + "<col  width=\"17%\"   >" //style=\"background-color:lightcyan\
                 
                 +        "</colgroup>" +
                   "<th align=\"left\"  style=\"background-image: linear-gradient(147deg, #200D54 2%, blue 74%\" >" + Name + "</th>"
                       
-                        
+                     + "<th align=\"left\"  style=\"background-image: linear-gradient(147deg, #200D54 2%, blue 74%\" >" + product + "</th>"   
                         + "<th align=\"center\" style=\"background-image: linear-gradient(147deg, blue, darkblue, navy);color:grey;font-weight:bold\" >" + totalpoints +"</th>";
                 if (authorpoints !=0)
                 {
